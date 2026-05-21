@@ -282,21 +282,34 @@
                             // Always fetch Wikipedia to get the description (and translate name if needed)
                             try {
                                 const scientificQuery = topResult.species.scientificNameWithoutAuthor;
-                                const wikiUrl = `https://ja.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(scientificQuery)}&utf8=&format=json&origin=*`;
+                                const wikiUrl = `https://ja.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(scientificQuery)}&gsrlimit=1&prop=extracts&exintro=1&explaintext=1&utf8=&format=json&origin=*`;
                                 const wikiRes = await fetch(wikiUrl);
                                 if (wikiRes.ok) {
                                     const wikiData = await wikiRes.json();
-                                    if (wikiData.query && wikiData.query.search && wikiData.query.search.length > 0) {
-                                        const firstHit = wikiData.query.search[0];
-                                        
-                                        // Update name if we didn't have a Japanese one
-                                        if (!isJapanese(commonName) && isJapanese(firstHit.title)) {
-                                            commonName = firstHit.title;
-                                        }
-                                        
-                                        // Set description and strip HTML tags (like <span class="searchmatch">)
-                                        if (firstHit.snippet) {
-                                            description = firstHit.snippet.replace(/<[^>]*>?/gm, '') + '...';
+                                    if (wikiData.query && wikiData.query.pages) {
+                                        const pages = Object.values(wikiData.query.pages);
+                                        if (pages.length > 0) {
+                                            const firstHit = pages[0];
+                                            
+                                            // Update name if we didn't have a Japanese one
+                                            if (!isJapanese(commonName) && isJapanese(firstHit.title)) {
+                                                commonName = firstHit.title;
+                                            }
+                                            
+                                            // Set description and prevent mid-sentence cutoff
+                                            if (firstHit.extract) {
+                                                let fullText = firstHit.extract.replace(/\n/g, ''); // remove newlines
+                                                if (fullText.length > 150) {
+                                                    let truncated = fullText.substring(0, 150);
+                                                    let lastPeriodIndex = truncated.lastIndexOf('。');
+                                                    if (lastPeriodIndex !== -1) {
+                                                        fullText = truncated.substring(0, lastPeriodIndex + 1);
+                                                    } else {
+                                                        fullText = truncated + '...';
+                                                    }
+                                                }
+                                                description = fullText;
+                                            }
                                         }
                                     }
                                 }
