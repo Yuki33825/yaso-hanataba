@@ -990,270 +990,243 @@
             requestAnimationFrame(animateSimulator);
         }
 
-        // 7. Gift Modal Handlers
+// 7. Wrapping Paper & Archive Handlers
         function openGiftModal() {
             initAudio();
             collapseDrawer();
             
-            const today = new Date();
-            const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
-            document.getElementById('cardDateText').innerText = dateStr;
-
             const modal = document.getElementById('giftModal');
             modal.classList.add('visible');
             
-            const compositionList = document.getElementById('giftCompositionList');
-            let compHTML = '';
-            Object.keys(state.counts).forEach(key => {
-                if (state.counts[key] > 0) {
-                    const weed = WEEDS[key];
-                    compHTML += `${weed.name} x ${state.counts[key]}<br>`;
-                }
-            });
-            compositionList.innerHTML = compHTML;
-
-            document.getElementById('giftStepForm').classList.remove('hidden');
-            document.getElementById('giftStepCard').classList.add('hidden');
+            // Generate a quick preview canvas
+            generateWrappingCanvas(document.getElementById('wrappingPreviewContainer'), true);
         }
 
         function closeGiftModal() {
             document.getElementById('giftModal').classList.remove('visible');
         }
 
-        function generateGiftCard() {
-            const recipient = document.getElementById('recipientName').value.trim() || 'あなたへ';
-            const message = document.getElementById('giftMessage').value.trim() || '実用性はないけれど、日常の足元で見つけた、ただ愛おしい美しさを贈ります。';
+        // Generate the actual Canvas (preview=true scales it down, false creates high-res)
+        function generateWrappingCanvas(container, isPreview) {
+            container.innerHTML = '';
+            const canvas = document.createElement('canvas');
+            // A4 ratio (1:1.414). For high-res, 1240 x 1754
+            canvas.width = isPreview ? 300 : 1240;
+            canvas.height = isPreview ? 424 : 1754;
             
-            document.getElementById('cardRecipientText').innerText = `To: ${recipient}`;
-            document.getElementById('cardMessageText').innerText = message;
+            // Set scale factor for fonts and sizes
+            const scale = isPreview ? (300/1240) : 1;
+            const ctx = canvas.getContext('2d');
             
-            const listEl = document.getElementById('cardCompositionList');
-            let compHTML = '';
+            // Base background
+            // Determine background color based on the most abundant weed
+            let maxCount = 0;
+            let bgColor = '#FAF9F6'; // default
             Object.keys(state.counts).forEach(key => {
-                if (state.counts[key] > 0) {
-                    const weed = WEEDS[key];
-                    compHTML += `${weed.name} x ${state.counts[key]}<br>`;
+                if (state.counts[key] > maxCount) {
+                    maxCount = state.counts[key];
+                    if (WEEDS[key] && WEEDS[key].color) {
+                        // Lighten the color significantly for wrapping background
+                        bgColor = WEEDS[key].color;
+                    }
                 }
             });
-            listEl.innerHTML = compHTML;
-
-            const cardWeeds = document.getElementById('cardWeedsArea');
-            cardWeeds.innerHTML = '';
             
-            const sourceWeeds = document.querySelectorAll('#bouquetWeedsArea .weed-svg-item');
-            sourceWeeds.forEach(item => {
-                const clone = item.cloneNode(true);
-                const currentSc = item.style.getPropertyValue('--sc') || '0.7';
-                clone.style.setProperty('--sc', (parseFloat(currentSc) * 0.75).toFixed(2));
-                cardWeeds.appendChild(clone);
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add a very subtle light wash over it so it's not too intense
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Border
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 2 * scale;
+            ctx.strokeRect(40 * scale, 40 * scale, canvas.width - 80 * scale, canvas.height - 80 * scale);
+            ctx.strokeRect(50 * scale, 50 * scale, canvas.width - 100 * scale, canvas.height - 100 * scale);
+
+            // Center Content
+            ctx.fillStyle = '#2F3E32';
+            ctx.textAlign = 'center';
+            
+            // Title
+            ctx.font = `italic 400 ${48 * scale}px 'Outfit', sans-serif`;
+            ctx.letterSpacing = `${8 * scale}px`;
+            ctx.fillText("YASO HANATABA", canvas.width / 2, canvas.height * 0.25);
+            ctx.letterSpacing = '0px';
+
+            // Composition
+            ctx.font = `300 ${28 * scale}px 'Outfit', sans-serif`;
+            ctx.fillText("BOTANICAL COMPOSITION", canvas.width / 2, canvas.height * 0.4);
+            
+            let startY = canvas.height * 0.45;
+            ctx.font = `italic 400 ${24 * scale}px 'Shippori Mincho', serif`;
+            ctx.fillStyle = '#4B6851';
+            
+            let hasWeeds = false;
+            Object.keys(state.counts).forEach(key => {
+                if (state.counts[key] > 0) {
+                    hasWeeds = true;
+                    const weed = WEEDS[key];
+                    ctx.fillText(`- ${weed.scientific || weed.name}  x ${state.counts[key]} -`, canvas.width / 2, startY);
+                    startY += 40 * scale;
+                }
+            });
+            
+            if (!hasWeeds) {
+                ctx.fillText("No plants collected yet.", canvas.width / 2, startY);
+            }
+
+            // Date
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+            ctx.fillStyle = '#2F3E32';
+            ctx.font = `300 ${20 * scale}px 'Outfit', sans-serif`;
+            ctx.fillText(`Harvested on ${dateStr}`, canvas.width / 2, canvas.height * 0.85);
+            
+            // Folding guides (subtle lines)
+            ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+            ctx.lineWidth = 1 * scale;
+            ctx.setLineDash([5 * scale, 5 * scale]);
+            // Vertical center
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            // Horizontal thirds
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 3);
+            ctx.lineTo(canvas.width, canvas.height / 3);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height * 2 / 3);
+            ctx.lineTo(canvas.width, canvas.height * 2 / 3);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            if (isPreview) {
+                canvas.style.width = '100%';
+                canvas.style.maxWidth = '300px';
+                canvas.style.height = 'auto';
+                canvas.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+            }
+            container.appendChild(canvas);
+            return canvas;
+        }
+
+        function downloadWrappingPaper() {
+            // Generate full res
+            const hiddenDiv = document.createElement('div');
+            const canvas = generateWrappingCanvas(hiddenDiv, false);
+            
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+            
+            const link = document.createElement('a');
+            link.download = `yaso_wrapping_${dateStr}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.9);
+            link.click();
+        }
+
+        // 8. Photo Upload and Archive Logic
+        function handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Compress to max 800x800 square
+                    const canvas = document.createElement('canvas');
+                    const size = 800;
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Cover crop
+                    const scale = Math.max(size / img.width, size / img.height);
+                    const x = (size / scale - img.width) / 2 * scale; // Center
+                    const y = (size / scale - img.height) / 2 * scale;
+                    
+                    ctx.drawImage(img, (size - img.width * scale) / 2, (size - img.height * scale) / 2, img.width * scale, img.height * scale);
+                    
+                    const base64 = canvas.toDataURL('image/jpeg', 0.7);
+                    saveToArchive(base64);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function saveToArchive(photoBase64) {
+            let archive = JSON.parse(localStorage.getItem('yaso_archive') || '[]');
+            
+            // Clean up state.counts to only include > 0
+            const activeCounts = {};
+            Object.keys(state.counts).forEach(k => {
+                if (state.counts[k] > 0) activeCounts[k] = state.counts[k];
             });
 
-            document.getElementById('giftStepForm').classList.add('hidden');
-            document.getElementById('giftStepCard').classList.add('hidden');
-            
-            playChimeSound();
-        }
+            archive.unshift({ // Add to beginning
+                id: Date.now(),
+                date: new Date().toISOString(),
+                composition: activeCounts,
+                photo: photoBase64
+            });
 
-        function backToForm() {
-            document.getElementById('giftStepForm').classList.remove('hidden');
-            document.getElementById('giftStepCard').classList.add('hidden');
-        }
-
-        function startOver() {
+            localStorage.setItem('yaso_archive', JSON.stringify(archive));
+            alert('アーカイブに保存しました！');
             closeGiftModal();
             resetBouquet();
         }
 
-        // Export card to PNG using Canvas (Including dynamic SVG rendering)
-        function downloadCardImage() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 800;
-            canvas.height = 1000;
-            const ctx = canvas.getContext('2d');
+        function openArchiveModal() {
+            renderArchive();
+            document.getElementById('archiveModal').classList.add('visible');
+        }
 
-            // Background
-            ctx.fillStyle = '#FAF9F6';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        function closeArchiveModal() {
+            document.getElementById('archiveModal').classList.remove('visible');
+        }
 
-            // Double border
-            ctx.strokeStyle = '#2F3E32';
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(30, 30, canvas.width - 60, canvas.height - 60);
+        function renderArchive() {
+            const gallery = document.getElementById('archiveGallery');
+            gallery.innerHTML = '';
             
-            ctx.strokeStyle = 'rgba(47, 62, 50, 0.15)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
-
-            // Header Logo
-            ctx.fillStyle = '#68846C';
-            ctx.font = "italic 400 16px 'Outfit', sans-serif";
-            ctx.textAlign = 'center';
-            ctx.letterSpacing = '0.4em';
-            ctx.fillText("ZASSO HANATABA", canvas.width / 2, 85);
-            ctx.letterSpacing = '0px';
-
-            // Draw glass vase outline
-            const vaseX = 180;
-            const vaseY = 460;
-            ctx.strokeStyle = '#2F3E32';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.roundRect(vaseX - 50, vaseY, 100, 140, 20);
-            ctx.stroke();
+            const archive = JSON.parse(localStorage.getItem('yaso_archive') || '[]');
             
-            // Highlight
-            ctx.strokeStyle = 'rgba(47, 62, 50, 0.2)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(vaseX - 35, vaseY + 15);
-            ctx.lineTo(vaseX - 35, vaseY + 110);
-            ctx.stroke();
-            
-            const weedSVGs = document.querySelectorAll('#bouquetWeedsArea .weed-svg-item');
-            let loadedCount = 0;
-            
-            if (weedSVGs.length === 0) {
-                drawCardTextAndDownload(canvas, ctx);
+            if (archive.length === 0) {
+                gallery.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding: 40px 20px; color: #88928A; font-size: 13px;">まだアーカイブがありません。<br>花束を作って記録してみましょう。</div>';
                 return;
             }
 
-            const drawings = Array.from(weedSVGs).map((el) => {
-                const weedId = el.querySelector('svg').outerHTML.includes('clover') ? 'clover' :
-                               el.querySelector('svg').outerHTML.includes('nazuna') ? 'nazuna' :
-                               el.querySelector('svg').outerHTML.includes('tanpopo') ? 'tanpopo' : 'enokorogusa';
+            archive.forEach(item => {
+                const dateObj = new Date(item.date);
+                const dateStr = `${dateObj.getFullYear()}.${dateObj.getMonth()+1}.${dateObj.getDate()}`;
                 
-                const rotDeg = parseFloat(el.style.getPropertyValue('--rot') || '0');
-                const scale = parseFloat(el.style.getPropertyValue('--sc') || '1');
-                const txStyle = el.style.getPropertyValue('--tx') || '0';
-                const tyStyle = el.style.getPropertyValue('--ty') || '0';
-                
-                let tx = 0, ty = 0;
-                if (txStyle.includes('px')) tx = parseFloat(txStyle.split('calc(-50% + ')[1]) || 0;
-                if (tyStyle.includes('px')) ty = parseFloat(tyStyle) || 0;
-                
-                const zIndex = parseInt(el.style.zIndex) || 0;
-                
-                return { weedId, rotDeg, scale, tx, ty, zIndex };
-            });
-
-            drawings.sort((a, b) => a.zIndex - b.zIndex);
-
-            drawings.forEach((draw) => {
-                const tplSvg = getWeedSVGNode(draw.weedId);
-                const svgString = new XMLSerializer().serializeToString(tplSvg);
-                const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-                const url = URL.createObjectURL(svgBlob);
-                
-                const img = new Image();
-                img.onload = () => {
-                    ctx.save();
-                    ctx.translate(vaseX + draw.tx * 1.5, vaseY + 15 + draw.ty * 1.5);
-                    ctx.rotate(draw.rotDeg * Math.PI / 180);
-                    
-                    const w = 150 * draw.scale * 1.2;
-                    const h = 300 * draw.scale * 1.2;
-                    ctx.drawImage(img, -w / 2, -h + 20, w, h);
-                    
-                    ctx.restore();
-                    URL.revokeObjectURL(url);
-                    
-                    loadedCount++;
-                    if (loadedCount === drawings.length) {
-                        // Re-draw vase on top to overlap stems inside the glass
-                        ctx.strokeStyle = '#2F3E32';
-                        ctx.lineWidth = 4;
-                        ctx.fillStyle = 'rgba(250,249,246,0.1)';
-                        ctx.beginPath();
-                        ctx.roundRect(vaseX - 50, vaseY, 100, 140, 20);
-                        ctx.fill();
-                        ctx.stroke();
-
-                        drawCardTextAndDownload(canvas, ctx);
-                    }
-                };
-                img.src = url;
-            });
-        }
-
-        function drawCardTextAndDownload(canvas, ctx) {
-            const recipient = document.getElementById('recipientName').value.trim() || 'あなたへ';
-            const message = document.getElementById('giftMessage').value.trim() || '実用性はないけれど、日常の足元で見つけた、ただ愛おしい美しさを贈ります。';
-            const today = new Date();
-            const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
-
-            const contentX = 390;
-            ctx.fillStyle = '#1A281E';
-            ctx.textAlign = 'left';
-
-            // Recipient
-            ctx.font = "bold 26px 'Shippori Mincho', serif";
-            ctx.fillText(`To: ${recipient}`, contentX, 230);
-            
-            ctx.strokeStyle = 'rgba(104, 132, 108, 0.4)';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(contentX, 248);
-            ctx.lineTo(canvas.width - 80, 248);
-            ctx.stroke();
-
-            // Message
-            ctx.fillStyle = '#3B4E40';
-            ctx.font = "italic 400 18px 'Shippori Mincho', serif";
-            const maxTextWidth = canvas.width - contentX - 80;
-            wrapText(ctx, message, contentX, 290, 36, maxTextWidth);
-
-            // Divider
-            ctx.strokeStyle = 'rgba(104, 132, 108, 0.2)';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(contentX, 580);
-            ctx.lineTo(canvas.width - 80, 580);
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            // Botanical stats
-            ctx.fillStyle = '#68846C';
-            ctx.font = "500 13px 'Outfit', sans-serif";
-            ctx.fillText("BOTANICAL COMPOSITION", contentX, 615);
-
-            ctx.fillStyle = '#2F3E32';
-            ctx.font = "400 16px 'Shippori Mincho', serif";
-            ctx.fillText(`・シロツメクサ (Focal)  ×  ${state.counts.clover}`, contentX, 650);
-            ctx.fillText(`・ナズナ (Filler)  ×  ${state.counts.nazuna}`, contentX, 685);
-            ctx.fillText(`・タンポポ (Accent)  ×  ${state.counts.tanpopo}`, contentX, 720);
-            ctx.fillText(`・エノコログサ (Green)  ×  ${state.counts.enokorogusa}`, contentX, 755);
-
-            // Footer info
-            ctx.fillStyle = '#88928A';
-            ctx.font = "300 14px 'Outfit', sans-serif";
-            ctx.fillText(dateStr, contentX, 815);
-            
-            ctx.textAlign = 'right';
-            ctx.fillText("Roadside bouquet project", canvas.width - 80, 815);
-
-            // Download
-            const link = document.createElement('a');
-            link.download = `zasso_bouquet_${dateStr.replace(/\./g, '')}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }
-
-        function wrapText(context, text, x, y, lineHeight, maxWidth) {
-            const words = text.split('');
-            let line = '';
-
-            for (let n = 0; n < words.length; n++) {
-                let testLine = line + words[n];
-                let metrics = context.measureText(testLine);
-                let testWidth = metrics.width;
-                if (testWidth > maxWidth && n > 0) {
-                    context.fillText(line, x, y);
-                    line = words[n];
-                    y += lineHeight;
-                } else {
-                    line = testLine;
+                // Build composition text
+                let compText = '';
+                const keys = Object.keys(item.composition);
+                keys.slice(0, 3).forEach(key => {
+                    const weedName = WEEDS[key] ? WEEDS[key].name : key;
+                    compText += `${weedName} ×${item.composition[key]}<br>`;
+                });
+                if (keys.length > 3) {
+                    compText += `...他${keys.length - 3}種`;
                 }
-            }
-            context.fillText(line, x, y);
+
+                const card = document.createElement('div');
+                card.style.cssText = 'background: #fff; padding: 8px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column;';
+                
+                card.innerHTML = `
+                    <div style="width: 100%; aspect-ratio: 1; background: #eee; border-radius: 2px; overflow: hidden; margin-bottom: 8px;">
+                        <img src="${item.photo}" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <div style="font-family: 'Outfit', sans-serif; font-size: 11px; color: #88928A; margin-bottom: 4px;">${dateStr}</div>
+                    <div style="font-family: 'Shippori Mincho', serif; font-size: 10px; color: #2F3E32; line-height: 1.4;">${compText}</div>
+                `;
+                
+                gallery.appendChild(card);
+            });
         }
