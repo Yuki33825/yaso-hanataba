@@ -1,67 +1,9 @@
 // Weeds Dictionary (Includes note-based detailed insights)
-        const WEEDS = {
-            clover: {
-                id: 'clover',
-                name: 'シロツメクサ',
-                scientific: 'Trifolium repens',
-                role: '主役 / フォーカル',
-                desc: '丸くて白い花が可憐な野良の主役。首飾りや花冠でも親しまれています。',
-                points: 10,
-                color: '#DFE7DF',
-                badgeText: '🍀 これ積んで！',
-                caution: '花の根元や細部に小さなアブラムシが隠れていることがあります。やわらかい歯ブラシや筆に水をつけて優しく払い落としましょう。',
-                mizuage: '茎はしっかりしているため比較的簡単です。生ける前に茎の先をハサミで新しくカットしてください。',
-                manner: '芝生や空き地などに広く自生しています。人工的に整備・管理された公園内での採取は避けましょう。'
-            },
-            nazuna: {
-                id: 'nazuna',
-                name: 'ナズナ',
-                scientific: 'Capsella bursa-pastoris',
-                role: '脇役 / フィラー',
-                desc: '別名ペンペン草。ハート型の葉（実）が連なっており、花と花の隙間を優しく埋める名脇役。',
-                points: 5,
-                color: '#8EAC90',
-                badgeText: '🌱 これ積んで！',
-                caution: '草むらに密集して生えるため、細かい実の隙間に虫が潜んでいることがあります。バケツの水の中で振り洗いすると綺麗になります。',
-                mizuage: '野草の中では極めて頑丈で水揚げが良く、長持ちします。茎が細いため、麻紐で束ねる際も潰さないよう注意。',
-                manner: '道端や舗装の隙間によく生えていますが、犬などの散歩ルートを避けて綺麗な場所のものを選びましょう。'
-            },
-            tanpopo: {
-                id: 'tanpopo',
-                name: 'タンポポ',
-                scientific: 'Taraxacum',
-                role: 'アクセント',
-                desc: '野に輝く太陽の黄色。一輪入るだけで、花束全体がぱっと明るく華やかになります。',
-                points: 15,
-                color: '#E6C229',
-                badgeText: '🌼 これ積んで！',
-                caution: '茎を折ると断面から粘り気のある白い乳液が出ます。触れるとかぶれることがあるため、触ってしまったらすぐ水で洗いましょう。',
-                mizuage: '非常に水が下がりやすく萎びやすいため、摘み取ったらすぐ根元に濡らしたティッシュを巻くか水に浸して持ち帰ります。',
-                manner: '排気ガスを浴びやすい道路沿いを避け、日当たりの良い安全な河川敷などで採取するのが理想です。'
-            },
-            enokorogusa: {
-                id: 'enokorogusa',
-                name: 'エノコログサ',
-                scientific: 'Setaria viridis',
-                role: 'グリーン / 動き',
-                desc: 'ネコじゃらしとして愛されるイネ科の野草。フワフワした穂が光を浴びて輝き、立体感を与えます。',
-                points: 8,
-                color: '#A6BCA9',
-                badgeText: '🌾 これ積んで！',
-                caution: 'イネ科の植物アレルギーをお持ちの方は、取り扱い時にクシャミや目のかゆみなどのアレルギー症状に注意してください。',
-                mizuage: '乾燥に極めて強く、水揚げも良好です。ハサミで茎を斜めに大きく切り、水を吸い上げる断面積を広げて生けます。',
-                manner: '枯れて茶色く乾燥したものではなく、青々と瑞々しい若緑色のものを選ぶと、花束が生き生きとします。'
-            }
-        };
+        const WEEDS = {};
 
         // State Management
         let state = {
-            counts: {
-                clover: 0,
-                nazuna: 0,
-                tanpopo: 0,
-                enokorogusa: 0
-            },
+            counts: {},
             total: 0,
             activeBadges: [],
             cameraStream: null,
@@ -371,7 +313,7 @@
                                     id: detectedId,
                                     name: commonName,
                                     scientific: topResult.species.scientificNameWithoutAuthor,
-                                    role: '新発見',
+                                    role: '',
                                     desc: 'APIによって新しく発見された植物です。',
                                     points: Math.floor(score * 20) + 5,
                                     color: color,
@@ -568,6 +510,8 @@
             if (state.activeBadges.length >= 2) return;
 
             const weedKeys = Object.keys(WEEDS);
+            if (weedKeys.length === 0) return; // Wait until camera scans something
+
             const randomKey = weedKeys[Math.floor(Math.random() * weedKeys.length)];
             
             const viewCont = document.getElementById('viewportContainer');
@@ -588,7 +532,15 @@
             // Set modal info
             document.getElementById('guideJpName').innerText = data.name;
             document.getElementById('guideScName').innerText = data.scientific;
-            document.getElementById('guideRoleTag').innerText = data.role;
+            
+            const roleTag = document.getElementById('guideRoleTag');
+            if (data.role) {
+                roleTag.innerText = data.role;
+                roleTag.style.display = 'inline-block';
+            } else {
+                roleTag.style.display = 'none';
+            }
+            
             document.getElementById('guidePointsTag').innerText = `獲得: ${data.points}pt`;
             document.getElementById('guideMainDesc').innerText = data.desc;
             
