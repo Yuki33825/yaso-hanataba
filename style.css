@@ -821,9 +821,9 @@
         /* Empty state helper inside Vase container */
         .vase-empty-text {
             position: absolute;
-            top: 25%;
+            top: 16px;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translateX(-50%);
             font-family: var(--font-serif);
             font-size: 0.75rem;
             color: var(--color-gray);
