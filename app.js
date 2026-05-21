@@ -314,11 +314,11 @@
                                     name: commonName,
                                     scientific: topResult.species.scientificNameWithoutAuthor,
                                     role: '',
-                                    desc: 'APIによって新しく発見された植物です。',
+                                    desc: '',
                                     points: Math.floor(score * 20) + 5,
                                     color: color,
                                     badgeText: '✨ これ積んで！',
-                                    caution: '新しい植物です。トゲや樹液に注意して優しく扱いましょう。',
+                                    caution: 'トゲやかぶれる樹液に注意して優しく扱いましょう。',
                                     mizuage: '一般的な野草と同じように、茎を斜めに切って生けてみてください。',
                                     manner: '貴重な植物の可能性もあります。根こそぎ取らず、必要な分だけいただきましょう。'
                                 };
@@ -540,8 +540,6 @@
             } else {
                 roleTag.style.display = 'none';
             }
-            
-            document.getElementById('guidePointsTag').innerText = `獲得: ${data.points}pt`;
             document.getElementById('guideMainDesc').innerText = data.desc;
             
             // Juneray's safety rules & tips
