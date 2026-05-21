@@ -328,11 +328,32 @@
                         } else {
                             // Extract common name or fallback to scientific name
                             let commonName = scientificName;
+                            const isJapanese = (str) => /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(str);
+                            
                             if (topResult.species.commonNames && topResult.species.commonNames.length > 0) {
                                 // Prefer Japanese name if available
-                                const isJapanese = (str) => /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(str);
                                 const jpName = topResult.species.commonNames.find(n => isJapanese(n));
                                 commonName = jpName || topResult.species.commonNames[0];
+                            }
+                            
+                            // If no Japanese name was found, try translating via Wikipedia API
+                            if (!isJapanese(commonName)) {
+                                try {
+                                    const scientificQuery = topResult.species.scientificNameWithoutAuthor;
+                                    const wikiUrl = `https://ja.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(scientificQuery)}&utf8=&format=json&origin=*`;
+                                    const wikiRes = await fetch(wikiUrl);
+                                    if (wikiRes.ok) {
+                                        const wikiData = await wikiRes.json();
+                                        if (wikiData.query && wikiData.query.search && wikiData.query.search.length > 0) {
+                                            const firstHit = wikiData.query.search[0].title;
+                                            if (isJapanese(firstHit)) {
+                                                commonName = firstHit; // Translated! (e.g. "カタクリ")
+                                            }
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.log("Wiki translation failed:", e);
+                                }
                             }
                             
                             // Create a dynamic ID from the scientific name
