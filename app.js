@@ -68,7 +68,6 @@
             currentFacingMode: 'environment',
             videoDevices: [],
             isDrawerExpanded: false,
-            isScaleVisible: false,
             selectedWeedId: null,
             isModelLoaded: true // Always true now since we use API
         };
@@ -94,82 +93,8 @@
                 background: '#FAF9F6',
                 foreground: '#2F3E32'
             });
-
-            // Pre-draw millimeter scale
-            generateScaleTicks();
         });
 
-        // Generate Scale tick marks dynamically
-        function generateScaleTicks() {
-            const scaleTicks = document.getElementById('scaleTicks');
-            // CSS 1cm corresponds to ~37.79px (at standard 96dpi)
-            const cmInPx = 37.79;
-
-            for (let i = 0; i <= 18; i++) {
-                const tick = document.createElement('div');
-                tick.style.position = 'absolute';
-                tick.style.bottom = `${i * cmInPx}px`;
-                tick.style.left = '0';
-                tick.style.width = i % 5 === 0 ? '75%' : '45%';
-                tick.style.height = '1px';
-                tick.style.backgroundColor = i % 5 === 0 ? 'var(--color-yellow)' : 'rgba(255, 255, 255, 0.3)';
-
-                if (i % 5 === 0 || i === 0 || i === 12 || i === 15 || i === 18) {
-                    tick.style.height = '1.5px';
-                    const num = document.createElement('span');
-                    num.style.position = 'absolute';
-                    num.style.right = '4px';
-                    num.style.top = '-6px';
-                    num.style.fontSize = '0.55rem';
-                    num.style.fontFamily = 'var(--font-sans)';
-                    num.style.color = i % 5 === 0 ? 'var(--color-yellow)' : 'var(--color-white)';
-                    num.innerText = `${i}cm`;
-                    tick.appendChild(num);
-                }
-                scaleTicks.appendChild(tick);
-
-                // Add millimeters ticks
-                if (i < 18) {
-                    for (let j = 1; j < 10; j++) {
-                        if (j === 5) continue; // Half cm is represented by longer lines in some rulers, skip or make 55%
-                        const mTick = document.createElement('div');
-                        mTick.style.position = 'absolute';
-                        mTick.style.bottom = `${(i + j * 0.1) * cmInPx}px`;
-                        mTick.style.left = '0';
-                        mTick.style.width = j === 5 ? '55%' : '25%';
-                        mTick.style.height = '0.5px';
-                        mTick.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-                        scaleTicks.appendChild(mTick);
-                    }
-                    // 5mm tick line
-                    const halfTick = document.createElement('div');
-                    halfTick.style.position = 'absolute';
-                    halfTick.style.bottom = `${(i + 0.5) * cmInPx}px`;
-                    halfTick.style.left = '0';
-                    halfTick.style.width = '55%';
-                    halfTick.style.height = '0.8px';
-                    halfTick.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
-                    scaleTicks.appendChild(halfTick);
-                }
-            }
-        }
-
-        // Toggle ruler visibility
-        function togglePhysicalScale() {
-            const scale = document.getElementById('physicalScale');
-            const btn = document.getElementById('scaleToggleBtn');
-            state.isScaleVisible = !state.isScaleVisible;
-
-            if (state.isScaleVisible) {
-                scale.classList.add('visible');
-                btn.classList.add('active');
-                btn.innerHTML = '📐 定規を非表示';
-            } else {
-                scale.classList.remove('visible');
-                btn.classList.remove('active');
-                btn.innerHTML = '📐 定規を表示';
-            }
-        }
 
         // Synthesize Sound Effects using Web Audio API
         let audioCtx = null;
@@ -419,7 +344,8 @@
 
             } catch (err) {
                 console.error("Pl@ntNet Error:", err);
-                scanStatus.innerText = "通信エラー";
+                scanStatus.innerText = "エラー: " + err.message.substring(0, 20);
+                alert("APIエラー詳細: " + err.message);
                 setTimeout(() => { scanStatus.innerText = "Ready to Scan"; }, 3000);
                 // Fallback to spawn a random badge on error for demo purposes
                 badgeSpawner();
