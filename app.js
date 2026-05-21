@@ -454,7 +454,31 @@
             spawnWeedBadgeAt(weedId, targetX, targetY);
         }
 
-        // Spawn a Floating AR Weed Badge at coordinate
+        // Helper to get SVG node for both hardcoded and dynamic weeds
+        function getWeedSVGNode(weedId) {
+            const tpl = document.getElementById('tpl-' + weedId);
+            if (tpl) {
+                const clone = tpl.cloneNode(true);
+                clone.removeAttribute('id');
+                return clone;
+            }
+            
+            // Generate dynamic SVG
+            const weedInfo = WEEDS[weedId] || { color: '#ffffff' };
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = `
+            <svg viewBox="0 0 100 200" style="width: 100%; height: 100%; overflow: visible;" xmlns="http://www.w3.org/2000/svg">
+                <path d="M50 200 Q${40 + Math.random()*20} 120 50 40" stroke="rgba(255,255,255,0.4)" stroke-width="3" fill="none"/>
+                <path d="M48 140 Q30 130 35 110 Q45 125 48 140" fill="${weedInfo.color}" opacity="0.8"/>
+                <path d="M52 120 Q70 110 65 90 Q55 105 52 120" fill="${weedInfo.color}" opacity="0.8"/>
+                <circle cx="50" cy="40" r="18" fill="${weedInfo.color}" opacity="0.9"/>
+                <circle cx="50" cy="40" r="12" fill="rgba(255,255,255,0.5)"/>
+                <circle cx="50" cy="40" r="6" fill="#FAF9F6"/>
+            </svg>`;
+            return tempDiv.firstElementChild;
+        }
+
+        // --- AR / Badge Spawning ---
         function spawnWeedBadgeAt(weedId, x, y) {
             // Keep maximum of 2 badges to avoid crowding
             if (state.activeBadges.length >= 2) {
@@ -489,8 +513,7 @@
                 openGuideModal(weedId, badgeId, x, y);
             };
 
-            const svgTemplate = document.getElementById('tpl-' + weedId).cloneNode(true);
-            svgTemplate.removeAttribute('id');
+            const svgTemplate = getWeedSVGNode(weedId);
 
             badgeDiv.innerHTML = `
                 <div class="ar-target-ring"></div>
@@ -556,8 +579,7 @@
             // Set botanical illustration inside modal
             const iconContainer = document.getElementById('guideDetailIcon');
             iconContainer.innerHTML = '';
-            const svgClone = document.getElementById('tpl-' + weedId).cloneNode(true);
-            svgClone.removeAttribute('id');
+            const svgClone = getWeedSVGNode(weedId);
             iconContainer.appendChild(svgClone);
 
             // Bind "Pick" action to button
@@ -609,8 +631,7 @@
             particle.style.left = x + 'px';
             particle.style.top = y + 'px';
             
-            const svgTemplate = document.getElementById('tpl-' + weedId).cloneNode(true);
-            svgTemplate.removeAttribute('id');
+            const svgTemplate = getWeedSVGNode(weedId);
             particle.appendChild(svgTemplate);
 
             container.appendChild(particle);
@@ -648,26 +669,7 @@
             container.style.setProperty('--tx', `calc(-50% + ${tx}px)`);
             container.style.setProperty('--ty', `${ty}px`);
             
-            let weedSvg;
-            const tpl = document.getElementById('tpl-' + weedId);
-            if (tpl) {
-                weedSvg = tpl.cloneNode(true);
-                weedSvg.removeAttribute('id');
-            } else {
-                // Generate dynamic SVG
-                const weedInfo = WEEDS[weedId] || { color: '#ffffff' };
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = `
-                <svg viewBox="0 0 100 200" style="width: 100%; height: 100%; overflow: visible;">
-                    <path d="M50 200 Q${40 + Math.random()*20} 120 50 40" stroke="rgba(255,255,255,0.4)" stroke-width="3" fill="none"/>
-                    <path d="M48 140 Q30 130 35 110 Q45 125 48 140" fill="${weedInfo.color}" opacity="0.8"/>
-                    <path d="M52 120 Q70 110 65 90 Q55 105 52 120" fill="${weedInfo.color}" opacity="0.8"/>
-                    <circle cx="50" cy="40" r="18" fill="${weedInfo.color}" opacity="0.9"/>
-                    <circle cx="50" cy="40" r="12" fill="rgba(255,255,255,0.5)"/>
-                    <circle cx="50" cy="40" r="6" fill="#FAF9F6"/>
-                </svg>`;
-                weedSvg = tempDiv.firstElementChild;
-            }
+            const weedSvg = getWeedSVGNode(weedId);
             container.appendChild(weedSvg);
 
             if (weedId === 'enokorogusa') {
@@ -1147,7 +1149,7 @@
             drawings.sort((a, b) => a.zIndex - b.zIndex);
 
             drawings.forEach((draw) => {
-                const tplSvg = document.getElementById('tpl-' + draw.weedId);
+                const tplSvg = getWeedSVGNode(draw.weedId);
                 const svgString = new XMLSerializer().serializeToString(tplSvg);
                 const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
                 const url = URL.createObjectURL(svgBlob);
