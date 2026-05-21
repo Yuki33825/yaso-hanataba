@@ -148,70 +148,8 @@
                             </div>
 
                             <!-- Counters list -->
-                            <div class="stats-container">
-                                <!-- Shirotsumekusa -->
-                                <div class="stat-item hidden" id="item-clover" onclick="promptCount('clover')">
-                                    <div class="stat-icon" style="background-color: rgba(223, 231, 223, 0.1);">
-                                        <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="16" fill="#FAF9F6"/><circle cx="42" cy="40" r="5" fill="#EBF0EB"/><circle cx="58" cy="40" r="5" fill="#EBF0EB"/><circle cx="50" cy="34" r="5" fill="#FFFFFF"/></svg>
-                                    </div>
-                                    <div class="stat-details">
-                                        <div class="stat-header">
-                                            <span class="stat-name">シロツメクサ<span class="stat-role">主役</span></span>
-                                            <span class="stat-count" id="count-clover">0</span>
-                                        </div>
-                                        <div class="stat-bar-bg">
-                                            <div class="stat-bar-fill" id="bar-clover" style="background-color: var(--color-white)"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Nazuna -->
-                                <div class="stat-item hidden" id="item-nazuna" onclick="promptCount('nazuna')">
-                                    <div class="stat-icon" style="background-color: rgba(142, 172, 144, 0.15);">
-                                        <svg viewBox="0 0 100 100"><path d="M50 30 Q30 25 34 15 Q45 12 50 24 Z" fill="#A5C4A8"/><path d="M50 40 Q70 35 66 25 Q55 22 50 34 Z" fill="#A5C4A8"/></svg>
-                                    </div>
-                                    <div class="stat-details">
-                                        <div class="stat-header">
-                                            <span class="stat-name">ナズナ<span class="stat-role">脇役</span></span>
-                                            <span class="stat-count" id="count-nazuna">0</span>
-                                        </div>
-                                        <div class="stat-bar-bg">
-                                            <div class="stat-bar-fill" id="bar-nazuna" style="background-color: var(--color-sage-light)"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Tanpopo -->
-                                <div class="stat-item hidden" id="item-tanpopo" onclick="promptCount('tanpopo')">
-                                    <div class="stat-icon" style="background-color: rgba(238, 215, 112, 0.15);">
-                                        <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="14" fill="#EED770"/></svg>
-                                    </div>
-                                    <div class="stat-details">
-                                        <div class="stat-header">
-                                            <span class="stat-name">タンポポ<span class="stat-role">アクセント</span></span>
-                                            <span class="stat-count" id="count-tanpopo">0</span>
-                                        </div>
-                                        <div class="stat-bar-bg">
-                                            <div class="stat-bar-fill" id="bar-tanpopo" style="background-color: var(--color-yellow)"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Enokorogusa -->
-                                <div class="stat-item hidden" id="item-enokorogusa" onclick="promptCount('enokorogusa')">
-                                    <div class="stat-icon" style="background-color: rgba(104, 132, 108, 0.15);">
-                                        <svg viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="9" ry="20" fill="#68846C" transform="rotate(15 50 50)"/></svg>
-                                    </div>
-                                    <div class="stat-details">
-                                        <div class="stat-header">
-                                            <span class="stat-name">エノコログサ<span class="stat-role">グリーン</span></span>
-                                            <span class="stat-count" id="count-enokorogusa">0</span>
-                                        </div>
-                                        <div class="stat-bar-bg">
-                                            <div class="stat-bar-fill" id="bar-enokorogusa" style="background-color: var(--color-sage-primary)"></div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="stats-container" id="stats-container">
+                                <!-- Items will be dynamically generated here -->
                             </div>
                         </div>
 

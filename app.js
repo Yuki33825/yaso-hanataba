@@ -326,8 +326,40 @@
                         } else if (scientificName.includes('setaria')) {
                             detectedId = 'enokorogusa';
                         } else {
-                            // Map other generic weeds to our closest approximations
-                            detectedId = Math.random() > 0.5 ? 'enokorogusa' : 'nazuna';
+                            // Extract common name or fallback to scientific name
+                            let commonName = scientificName;
+                            if (topResult.species.commonNames && topResult.species.commonNames.length > 0) {
+                                // Prefer Japanese name if available
+                                const isJapanese = (str) => /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(str);
+                                const jpName = topResult.species.commonNames.find(n => isJapanese(n));
+                                commonName = jpName || topResult.species.commonNames[0];
+                            }
+                            
+                            // Create a dynamic ID from the scientific name
+                            detectedId = scientificName.replace(/[^a-z0-9]/g, '_');
+                            
+                            // Add to WEEDS if it doesn't exist
+                            if (!WEEDS[detectedId]) {
+                                // Generate a random pastel color based on the ID string
+                                let hash = 0;
+                                for (let i = 0; i < detectedId.length; i++) hash = detectedId.charCodeAt(i) + ((hash << 5) - hash);
+                                const h = Math.abs(hash) % 360;
+                                const color = `hsl(${h}, 40%, 75%)`;
+                                
+                                WEEDS[detectedId] = {
+                                    id: detectedId,
+                                    name: commonName,
+                                    scientific: topResult.species.scientificNameWithoutAuthor,
+                                    role: '新発見',
+                                    desc: 'APIによって新しく発見された植物です。',
+                                    points: Math.floor(score * 20) + 5,
+                                    color: color,
+                                    badgeText: '✨ これ積んで！',
+                                    caution: '新しい植物です。トゲや樹液に注意して優しく扱いましょう。',
+                                    mizuage: '一般的な野草と同じように、茎を斜めに切って生けてみてください。',
+                                    manner: '貴重な植物の可能性もあります。根こそぎ取らず、必要な分だけいただきましょう。'
+                                };
+                            }
                         }
                     }
                 }
@@ -560,7 +592,7 @@
             spawnFlyingParticle(weedId, startX, startY);
 
             setTimeout(() => {
-                state.counts[weedId]++;
+                state.counts[weedId] = (state.counts[weedId] || 0) + 1;
                 state.total++;
                 
                 playChimeSound();
@@ -599,7 +631,6 @@
             }, 800);
         }
 
-        // Drop SVG element inside the virtual vase
         function dropWeedInVase(weedId) {
             const weedsArea = document.getElementById('bouquetWeedsArea');
             document.getElementById('vaseEmptyText').style.opacity = '0';
@@ -617,8 +648,26 @@
             container.style.setProperty('--tx', `calc(-50% + ${tx}px)`);
             container.style.setProperty('--ty', `${ty}px`);
             
-            const weedSvg = document.getElementById('tpl-' + weedId).cloneNode(true);
-            weedSvg.removeAttribute('id');
+            let weedSvg;
+            const tpl = document.getElementById('tpl-' + weedId);
+            if (tpl) {
+                weedSvg = tpl.cloneNode(true);
+                weedSvg.removeAttribute('id');
+            } else {
+                // Generate dynamic SVG
+                const weedInfo = WEEDS[weedId] || { color: '#ffffff' };
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = `
+                <svg viewBox="0 0 100 200" style="width: 100%; height: 100%; overflow: visible;">
+                    <path d="M50 200 Q${40 + Math.random()*20} 120 50 40" stroke="rgba(255,255,255,0.4)" stroke-width="3" fill="none"/>
+                    <path d="M48 140 Q30 130 35 110 Q45 125 48 140" fill="${weedInfo.color}" opacity="0.8"/>
+                    <path d="M52 120 Q70 110 65 90 Q55 105 52 120" fill="${weedInfo.color}" opacity="0.8"/>
+                    <circle cx="50" cy="40" r="18" fill="${weedInfo.color}" opacity="0.9"/>
+                    <circle cx="50" cy="40" r="12" fill="rgba(255,255,255,0.5)"/>
+                    <circle cx="50" cy="40" r="6" fill="#FAF9F6"/>
+                </svg>`;
+                weedSvg = tempDiv.firstElementChild;
+            }
             container.appendChild(weedSvg);
 
             if (weedId === 'enokorogusa') {
@@ -644,7 +693,7 @@
 
         // Reset Bouquet
         function resetBouquet() {
-            state.counts = { clover: 0, nazuna: 0, tanpopo: 0, enokorogusa: 0 };
+            Object.keys(WEEDS).forEach(k => { state.counts[k] = 0; });
             state.total = 0;
             
             const weedsArea = document.getElementById('bouquetWeedsArea');
@@ -768,6 +817,23 @@
             state.isDrawerExpanded = false;
         }
 
+        function checkAchievement() {
+            const aiText = document.getElementById('aiAdviceText');
+            const uniqueTypes = Object.keys(state.counts).filter(k => state.counts[k] > 0).length;
+            
+            if (state.total === 0) {
+                aiText.innerText = "まだ花束は空っぽです。足元の小さな美しさを探してみましょう。まずはシロツメクサやタンポポなど、主役になる花を摘んでみてください。";
+            } else if (state.total > 0 && state.total < 5) {
+                aiText.innerText = "素敵なスタートですね！花束にボリュームを出すために、ナズナやエノコログサなどのグリーン（葉っぱ類）を探してみてください。";
+            } else if (uniqueTypes >= 4) {
+                aiText.innerText = "素晴らしい！いろんな種類の野草が揃い、バランスの取れた美しい花束になりました。さらに好きな種類を足して、あなたらしさを表現してみましょう。";
+            } else if (state.total >= 5 && state.total < 10) {
+                aiText.innerText = "花束らしくなってきました！さらに違う種類の草花を足すと、より華やかな印象になりますよ。";
+            } else {
+                aiText.innerText = "立派な野草の花束が完成しつつありますね！このまま集めるのも良し、メッセージを添えて誰かに贈るのも素敵です。";
+            }
+        }
+
         // Update indicators, progress bars, AI text
         function updateUI() {
             document.getElementById('totalCountBadge').innerText = `${state.total} 本`;
@@ -784,81 +850,59 @@
                 }
             }
 
+            const statsContainer = document.getElementById('stats-container');
+
             Object.keys(WEEDS).forEach(key => {
-                const count = state.counts[key];
-                const countEl = document.getElementById('count-' + key);
-                const itemEl = document.getElementById('item-' + key);
+                const count = state.counts[key] || 0;
+                let itemEl = document.getElementById('item-' + key);
                 
-                if (parseInt(countEl.innerText) !== count) {
-                    countEl.innerText = count;
-                    countEl.classList.add('bump');
-                    setTimeout(() => countEl.classList.remove('bump'), 200);
-                }
-
-                if (itemEl) {
-                    if (count > 0) {
-                        itemEl.classList.remove('hidden');
-                    } else {
-                        itemEl.classList.add('hidden');
+                if (count > 0) {
+                    if (!itemEl && statsContainer) {
+                        const weed = WEEDS[key];
+                        const itemHTML = `
+                        <div class="stat-item hidden" id="item-${key}" onclick="promptCount('${key}')">
+                            <div class="stat-icon" style="background-color: ${weed.color}22;">
+                                ${weed.svgIcon || `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="15" fill="${weed.color}"/></svg>`}
+                            </div>
+                            <div class="stat-details">
+                                <div class="stat-header">
+                                    <span class="stat-name">${weed.name}<span class="stat-role">${weed.role || ''}</span></span>
+                                    <span class="stat-count" id="count-${key}">0</span>
+                                </div>
+                                <div class="stat-bar-bg">
+                                    <div class="stat-bar-fill" id="bar-${key}" style="background-color: ${weed.color}; width: 0%;"></div>
+                                </div>
+                            </div>
+                        </div>`;
+                        statsContainer.insertAdjacentHTML('beforeend', itemHTML);
+                        itemEl = document.getElementById('item-' + key);
+                        // Trigger reflow to ensure CSS transition works for the new element
+                        void itemEl.offsetWidth;
                     }
+                    
+                    itemEl.classList.remove('hidden');
+                    const countEl = document.getElementById('count-' + key);
+                    const barEl = document.getElementById('bar-' + key);
+                    
+                    if (parseInt(countEl.innerText) !== count) {
+                        countEl.innerText = count;
+                        countEl.classList.add('bump');
+                        setTimeout(() => countEl.classList.remove('bump'), 200);
+                    }
+                    
+                    const pct = Math.min((count / 10) * 100, 100);
+                    barEl.style.width = pct + '%';
+                } else if (itemEl) {
+                    itemEl.classList.add('hidden');
                 }
-
-                const pct = Math.min((count / 6) * 100, 100);
-                document.getElementById('bar-' + key).style.width = pct + '%';
             });
 
-            updateAIAdvice();
+            checkAchievement();
         }
 
         // Emotional dynamic AI Advice
         function updateAIAdvice() {
-            const adviceEl = document.getElementById('aiAdviceText');
-            let text = "";
-
-            const { clover, nazuna, tanpopo, enokorogusa } = state.counts;
-
-            if (state.total === 0) {
-                text = "まだ花束は空っぽです。足元の小さな美しさを探してみましょう。まずはシロツメクサやタンポポなど、主役になる花を手にとってみてください。";
-            } else if (state.total === 1) {
-                text = "最初の一本ですね。静かで美しい始まりです。次はそれを引き立てるナズナや、動きを出すエノコログサを合わせてみましょう。";
-            } else {
-                const flowersCount = clover + tanpopo;
-                const greensCount = enokorogusa + nazuna;
-
-                if (clover > 0 && tanpopo === 0 && greensCount === 0) {
-                    text = "シロツメクサだけの素朴な花束ですね。少しエノコログサなどの「緑」を添えると、野原を吹き抜ける風のような立体感が生まれます。";
-                } else if (tanpopo > 3 && greensCount === 0) {
-                    text = "タンポポの黄色が陽だまりのように鮮やかです。ここにナズナを足すと、黄色の強さが和らぎ、可憐で落ち着いた表情になります。";
-                } else if (greensCount > 4 && flowersCount === 0) {
-                    text = "エノコログサとナズナが織りなす、瑞々しく涼やかなグリーンブーケです。シロツメクサを数本あしらうだけで、一気に主役が引き立ちます。";
-                } else if (clover > 0 && tanpopo > 0 && greensCount === 0) {
-                    text = "白と黄色のコントラストがとても愛らしいです。背景となる緑（エノコログサ）が数本加わると、より自然な野花の美しさが整います。";
-                } else if (clover > 0 && nazuna > 0 && tanpopo > 0 && enokorogusa > 0) {
-                    text = "素晴らしい調和です！主役、脇役、そして緑のバランスが整い、まるで朝露の降りた原っぱをそのまま手で束ねたような情緒を感じる花束になっています。";
-                } else if (state.total >= 10) {
-                    text = "とても立派で贅沢な野花の花束になりましたね。実用性はない、ただ美しいだけのもの。この愛おしい日常の一部を、大切な誰かに贈ってみませんか？";
-                } else {
-                    let elements = [];
-                    if (clover > 0) elements.push("シロツメクサの白");
-                    if (tanpopo > 0) elements.push("タンポポの黄色");
-                    if (enokorogusa > 0) elements.push("エノコログサの穂");
-                    if (nazuna > 0) elements.push("ナズナのハート型の葉");
-
-                    text = `${elements.join('と')}が、優しく重なり合っています。`;
-                    if (greensCount < flowersCount) {
-                        text += " エノコログサなどのグリーンを少し足すと、花と花の間に優しい隙間が生まれます。";
-                    } else {
-                        text += " シロツメクサやタンポポの明るさを少し足して、全体の視点をフォーカスさせてみましょう。";
-                    }
-                }
-            }
-
-            // Fade transition
-            adviceEl.style.opacity = '0';
-            setTimeout(() => {
-                adviceEl.innerText = text;
-                adviceEl.style.opacity = '1';
-            }, 300);
+            checkAchievement();
         }
 
         // Fallback Canvas weeds simulator loop
@@ -966,6 +1010,16 @@
             const modal = document.getElementById('giftModal');
             modal.classList.add('visible');
             
+            const compositionList = document.getElementById('giftCompositionList');
+            let compHTML = '';
+            Object.keys(state.counts).forEach(key => {
+                if (state.counts[key] > 0) {
+                    const weed = WEEDS[key];
+                    compHTML += `${weed.name} x ${state.counts[key]}<br>`;
+                }
+            });
+            compositionList.innerHTML = compHTML;
+
             document.getElementById('giftStepForm').classList.remove('hidden');
             document.getElementById('giftStepCard').classList.add('hidden');
         }
@@ -982,12 +1036,14 @@
             document.getElementById('cardMessageText').innerText = message;
             
             const listEl = document.getElementById('cardCompositionList');
-            listEl.innerHTML = `
-                シロツメクサ x ${state.counts.clover}<br>
-                ナズナ x ${state.counts.nazuna}<br>
-                タンポポ x ${state.counts.tanpopo}<br>
-                エノコログサ x ${state.counts.enokorogusa}
-            `;
+            let compHTML = '';
+            Object.keys(state.counts).forEach(key => {
+                if (state.counts[key] > 0) {
+                    const weed = WEEDS[key];
+                    compHTML += `${weed.name} x ${state.counts[key]}<br>`;
+                }
+            });
+            listEl.innerHTML = compHTML;
 
             const cardWeeds = document.getElementById('cardWeedsArea');
             cardWeeds.innerHTML = '';
@@ -1001,7 +1057,7 @@
             });
 
             document.getElementById('giftStepForm').classList.add('hidden');
-            document.getElementById('giftStepCard').classList.remove('hidden');
+            document.getElementById('giftStepCard').classList.add('hidden');
             
             playChimeSound();
         }
