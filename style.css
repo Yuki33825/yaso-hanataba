@@ -25,6 +25,13 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        html {
+            width: 100%;
+            height: 100svh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
         body {
             background-color: #0b0d0c;
             color: var(--color-white);
@@ -33,8 +40,11 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            width: 100vw;
+            height: 100svh;
+            width: 100%;
+            position: fixed; /* Prevent iOS scroll bouncing */
+            inset: 0;
+            touch-action: none;
         }
 
         /* Split layout for desktop screen */
@@ -44,7 +54,7 @@
             justify-content: center;
             gap: 40px;
             width: 100%;
-            height: 100vh;
+            height: 100%;
             padding: 20px;
         }
 
@@ -101,17 +111,30 @@
         }
 
         @media (max-width: 900px) {
+            body {
+                /* Safari zoom fix */
+                position: fixed;
+                width: 100%;
+                height: 100svh;
+            }
             .desktop-panel {
                 display: none !important;
             }
             .workspace-wrapper {
                 padding: 0;
                 gap: 0;
+                display: block;
             }
             .app-frame {
-                max-height: 100%;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100svh;
+                max-height: none;
                 border: none;
                 border-radius: 0;
+                z-index: 1;
             }
         }
 
