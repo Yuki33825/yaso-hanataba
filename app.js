@@ -270,6 +270,7 @@
                         } else {
                             // Extract common name or fallback to scientific name
                             let commonName = scientificName;
+                            let description = '野原で見つけた美しい草花です。'; // default fallback
                             const isJapanese = (str) => /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(str);
                             
                             if (topResult.species.commonNames && topResult.species.commonNames.length > 0) {
@@ -278,24 +279,29 @@
                                 commonName = jpName || topResult.species.commonNames[0];
                             }
                             
-                            // If no Japanese name was found, try translating via Wikipedia API
-                            if (!isJapanese(commonName)) {
-                                try {
-                                    const scientificQuery = topResult.species.scientificNameWithoutAuthor;
-                                    const wikiUrl = `https://ja.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(scientificQuery)}&utf8=&format=json&origin=*`;
-                                    const wikiRes = await fetch(wikiUrl);
-                                    if (wikiRes.ok) {
-                                        const wikiData = await wikiRes.json();
-                                        if (wikiData.query && wikiData.query.search && wikiData.query.search.length > 0) {
-                                            const firstHit = wikiData.query.search[0].title;
-                                            if (isJapanese(firstHit)) {
-                                                commonName = firstHit; // Translated! (e.g. "カタクリ")
-                                            }
+                            // Always fetch Wikipedia to get the description (and translate name if needed)
+                            try {
+                                const scientificQuery = topResult.species.scientificNameWithoutAuthor;
+                                const wikiUrl = `https://ja.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(scientificQuery)}&utf8=&format=json&origin=*`;
+                                const wikiRes = await fetch(wikiUrl);
+                                if (wikiRes.ok) {
+                                    const wikiData = await wikiRes.json();
+                                    if (wikiData.query && wikiData.query.search && wikiData.query.search.length > 0) {
+                                        const firstHit = wikiData.query.search[0];
+                                        
+                                        // Update name if we didn't have a Japanese one
+                                        if (!isJapanese(commonName) && isJapanese(firstHit.title)) {
+                                            commonName = firstHit.title;
+                                        }
+                                        
+                                        // Set description and strip HTML tags (like <span class="searchmatch">)
+                                        if (firstHit.snippet) {
+                                            description = firstHit.snippet.replace(/<[^>]*>?/gm, '') + '...';
                                         }
                                     }
-                                } catch (e) {
-                                    console.log("Wiki translation failed:", e);
                                 }
+                            } catch (e) {
+                                console.log("Wiki info fetch failed:", e);
                             }
                             
                             // Create a dynamic ID from the scientific name
@@ -314,7 +320,7 @@
                                     name: commonName,
                                     scientific: topResult.species.scientificNameWithoutAuthor,
                                     role: '',
-                                    desc: '',
+                                    desc: description,
                                     points: Math.floor(score * 20) + 5,
                                     color: color,
                                     badgeText: '✨ これ積んで！',
